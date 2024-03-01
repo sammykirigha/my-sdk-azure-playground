@@ -1,4 +1,4 @@
-const { BlobServiceClient } = require("@azure/storage-blob");
+const { BlobServiceClient, StorageSharedKeyCredential } = require("@azure/storage-blob");
 const { v1: uuidv1 } = require("uuid");
 require("dotenv").config();
 
@@ -8,58 +8,39 @@ require("dotenv").config();
 
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
+const account_key = process.env.ACCOUNT_KEY
+const account_name = 'sdkplayground123456';
 
-async function main() {
-    try {
-        console.log("Azure Blob storage v12 - JavaScript quickstart sample");
-        if (!AZURE_STORAGE_CONNECTION_STRING) {
-            throw Error('Azure Storage Connection string not found');
-        }
 
-        // Quick start code goes here
-        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+console.log("Azure Blob storage v12 - JavaScript quickstart sample");
+if (!AZURE_STORAGE_CONNECTION_STRING) {
+    throw Error('Azure Storage Connection string not found');
+}
 
-        //create a container
-        const containerName = 'SammyAzure' + uuidv1();
-        console.log('\nCreating container....');
-        console.log('\t', containerName);
+// Quick start code goes here
+const key_credential = new StorageSharedKeyCredential(account_name, account_key)
 
+const blob_client = new BlobServiceClient(`https://${account_name}.blob.core.windows.net`, key_credential);
+
+async function container_inventory() {
+    let containers = blob_client.listContainers();
+    for await (const container of containers) {
+        console.log(container.name)
         //Get a reference to a container
-        const containerClient = blobServiceClient.getContainerClient(containerName);
-
-        //create a container
-        const createContainerResponse = await containerClient.create();
-        console.log("containerClient", createContainerResponse)
-        console.log(
-            `Container was created successfully.\n\trequestId:${createContainerResponse.requestId}\n\tURL: ${containerClient.url}`
-        );
-
+        const containerClient = blob_client.getContainerClient(container.name);
         //list the blobs in the container
-        for await (const blob of containerClient.listBlobsFlat()) {
+        const blobs = containerClient.listBlobsFlat()
+        for await (const blob of blobs) {
             //get the blob conatiner name, to get the url
             const tempBlokBlobClient = containerClient.getBlobBatchClient(blob.name);
 
             // Display blob name and URL
             console.log(
-                `\n\tname: ${blob.name}\n\tURL: ${tempBlockBlobClient.url}\n`
+                `\n\tname: ${blob.name}\n\tURL: ${tempBlokBlobClient.url}\n`
             );
         }
-
-        // Delete container
-        console.log('\nDeleting container...');
-
-        const deleteContainerResponse = await containerClient.delete();
-        console.log(
-            'Container was deleted successfully. requestId: ',
-            deleteContainerResponse.requestId
-        )
-
-
-    } catch (err) {
-        console.err(`Error: ${err.message}`);
     }
 }
 
-main()
-    .then(() => console.log("Done"))
-    .catch((ex) => console.log(ex.message));
+
+container_inventory();
